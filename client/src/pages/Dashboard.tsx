@@ -108,7 +108,11 @@ export default function Dashboard() {
 
   const handleCopyLink = (shortCode: string) => {
     const baseUrl = window.location.origin;
-    const fullUrl = `${baseUrl}/r/${shortCode}`;
+    const pathname = window.location.pathname;
+    const isGitHubPages = pathname.includes('/redirecionador');
+    const fullUrl = isGitHubPages 
+      ? `${baseUrl}${pathname}#/r/${shortCode}`
+      : `${baseUrl}/r/${shortCode}`;
     navigator.clipboard.writeText(fullUrl);
     toast.success('Link copiado para a área de transferência!');
   };
