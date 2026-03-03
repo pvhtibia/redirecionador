@@ -1,70 +1,91 @@
 import { useEffect, useState } from 'react';
-import { useLinks } from '@/contexts/LinksContext';
 import { useRoute } from 'wouter';
 import { Loader2 } from 'lucide-react';
 
 /**
  * Design System: Minimalismo Funcional
  * - Página de redirecionamento limpa e rápida
- * - Spinner minimalista durante o redirecionamento
- * - Fallback para erro 404 se link não existir
- * - Aguarda carregamento dos dados do localStorage
+ * - Busca links diretamente do localStorage
  */
+
+const STORAGE_KEY = 'link-redirector-links';
+
+interface RedirectLink {
+  id: string;
+  shortCode: string;
+  name: string;
+  targetUrl: string;
+  createdAt: string;
+  clicks: number;
+}
 
 export default function Redirect() {
   const [match, params] = useRoute('/r/:shortCode');
-  const { getLink, recordClick, isLoaded, links } = useLinks();
   const [status, setStatus] = useState<'loading' | 'error' | 'redirecting'>('loading');
-  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [availableLinks, setAvailableLinks] = useState<string>('');
 
   useEffect(() => {
-    // Aguardar que os dados sejam carregados
-    if (!isLoaded) {
-      return;
-    }
-
     if (!match || !params?.shortCode) {
       setStatus('error');
-      setDebugInfo('Parâmetro shortCode não encontrado');
       return;
     }
 
     const shortCode = params.shortCode as string;
-    
-    // Log para debug
+
+    // Carregar links do localStorage
+    let links: RedirectLink[] = [];
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        links = JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar links:', error);
+    }
+
     console.log('Buscando link:', shortCode);
     console.log('Links disponíveis:', links.length);
-    console.log('Links:', links.map(l => l.shortCode));
 
-    const link = getLink(shortCode);
+    // Buscar o link
+    const link = links.find(l => l.shortCode === shortCode);
 
     if (!link) {
       setStatus('error');
-      setDebugInfo(`Link "${shortCode}" não encontrado. Links disponíveis: ${links.map(l => l.shortCode).join(', ') || 'nenhum'}`);
+      setAvailableLinks(links.map(l => l.shortCode).join(', ') || 'nenhum');
       return;
     }
 
     // Registrar clique
-    recordClick(shortCode);
+    const updatedLinks = links.map(l =>
+      l.shortCode === shortCode
+        ? { ...l, clicks: l.clicks + 1 }
+        : l
+    );
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedLinks));
+    } catch (error) {
+      console.error('Erro ao atualizar cliques:', error);
+    }
+
     setStatus('redirecting');
 
-    // Redirecionar após 500ms
+    // Redirecionar após 300ms
     const timer = setTimeout(() => {
       window.location.href = link.targetUrl;
-    }, 500);
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [match, params, getLink, recordClick, isLoaded, links]);
+  }, [match, params]);
 
   if (status === 'error') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <h1 className="text-4xl font-bold text-foreground mb-2">404</h1>
-          <p className="text-muted-foreground mb-2">Link não encontrado ou expirado.</p>
-          {debugInfo && (
+          <p className="text-muted-foreground mb-6">Link não encontrado ou expirado.</p>
+          {availableLinks && (
             <p className="text-xs text-muted-foreground mb-6 bg-secondary p-3 rounded">
-              {debugInfo}
+              Links disponíveis: {availableLinks}
             </p>
           )}
           <a
