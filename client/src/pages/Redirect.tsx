@@ -8,14 +8,20 @@ import { Loader2 } from 'lucide-react';
  * - Página de redirecionamento limpa e rápida
  * - Spinner minimalista durante o redirecionamento
  * - Fallback para erro 404 se link não existir
+ * - Aguarda carregamento dos dados do localStorage
  */
 
 export default function Redirect() {
   const [match, params] = useRoute('/r/:shortCode');
-  const { getLink, recordClick } = useLinks();
-  const [status, setStatus] = useState<'loading' | 'error'>('loading');
+  const { getLink, recordClick, isLoaded } = useLinks();
+  const [status, setStatus] = useState<'loading' | 'error' | 'redirecting'>('loading');
 
   useEffect(() => {
+    // Aguardar que os dados sejam carregados do localStorage
+    if (!isLoaded) {
+      return;
+    }
+
     if (!match || !params?.shortCode) {
       setStatus('error');
       return;
@@ -30,6 +36,7 @@ export default function Redirect() {
 
     // Registrar clique
     recordClick(params.shortCode);
+    setStatus('redirecting');
 
     // Redirecionar após 500ms
     const timer = setTimeout(() => {
@@ -37,7 +44,7 @@ export default function Redirect() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [match, params, getLink, recordClick]);
+  }, [match, params, getLink, recordClick, isLoaded]);
 
   if (status === 'error') {
     return (

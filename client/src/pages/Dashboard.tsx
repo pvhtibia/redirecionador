@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLinks } from '@/contexts/LinksContext';
 import { useLocation } from 'wouter';
-import { Plus, Trash2, Copy, LogOut } from 'lucide-react';
+import { Plus, Trash2, Copy, LogOut, Edit2, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 /**
@@ -13,16 +13,29 @@ import { toast } from 'sonner';
  * - Cores: Azul vibrante para CTAs, cinza para secundário
  */
 
+interface EditingLink {
+  id: string;
+  name: string;
+  targetUrl: string;
+}
+
 export default function Dashboard() {
   const { logout } = useAuth();
-  const { links, addLink, deleteLink } = useLinks();
+  const { links, addLink, deleteLink, updateLink } = useLinks();
   const [, setLocation] = useLocation();
+  const [linkName, setLinkName] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [editingLink, setEditingLink] = useState<EditingLink | null>(null);
 
   const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!linkName.trim()) {
+      toast.error('Por favor, insira um nome para o link');
+      return;
+    }
+
     if (!targetUrl.trim()) {
       toast.error('Por favor, insira uma URL válida');
       return;
@@ -37,8 +50,9 @@ export default function Dashboard() {
     await new Promise(resolve => setTimeout(resolve, 200));
 
     try {
-      addLink(targetUrl);
+      addLink(linkName, targetUrl);
       toast.success('Link criado com sucesso!');
+      setLinkName('');
       setTargetUrl('');
     } catch (error) {
       toast.error('Erro ao criar link');
@@ -50,6 +64,46 @@ export default function Dashboard() {
   const handleDeleteLink = (id: string) => {
     deleteLink(id);
     toast.success('Link removido com sucesso');
+  };
+
+  const handleEditLink = (link: typeof links[0]) => {
+    setEditingLink({
+      id: link.id,
+      name: link.name,
+      targetUrl: link.targetUrl,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingLink) return;
+
+    if (!editingLink.name.trim()) {
+      toast.error('Por favor, insira um nome para o link');
+      return;
+    }
+
+    if (!editingLink.targetUrl.trim()) {
+      toast.error('Por favor, insira uma URL válida');
+      return;
+    }
+
+    if (!editingLink.targetUrl.startsWith('http://') && !editingLink.targetUrl.startsWith('https://')) {
+      toast.error('A URL deve começar com http:// ou https://');
+      return;
+    }
+
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    try {
+      updateLink(editingLink.id, editingLink.name, editingLink.targetUrl);
+      toast.success('Link atualizado com sucesso!');
+      setEditingLink(null);
+    } catch (error) {
+      toast.error('Erro ao atualizar link');
+    }
+
+    setIsLoading(false);
   };
 
   const handleCopyLink = (shortCode: string) => {
@@ -87,23 +141,33 @@ export default function Dashboard() {
             {/* Add Link Form */}
             <div className="card-minimal mb-8">
               <h2 className="text-xl font-bold text-foreground mb-4">Criar Novo Link</h2>
-              <form onSubmit={handleAddLink} className="flex gap-3">
+              <form onSubmit={handleAddLink} className="space-y-4">
                 <input
-                  type="url"
-                  value={targetUrl}
-                  onChange={(e) => setTargetUrl(e.target.value)}
-                  placeholder="https://exemplo.com/pagina"
-                  className="input-minimal flex-1"
+                  type="text"
+                  value={linkName}
+                  onChange={(e) => setLinkName(e.target.value)}
+                  placeholder="Ex: Meu Site, Blog, Portfolio"
+                  className="input-minimal w-full"
                   disabled={isLoading}
                 />
-                <button
-                  type="submit"
-                  disabled={isLoading || !targetUrl}
-                  className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus className="w-4 h-4" />
-                  Criar
-                </button>
+                <div className="flex gap-3">
+                  <input
+                    type="url"
+                    value={targetUrl}
+                    onChange={(e) => setTargetUrl(e.target.value)}
+                    placeholder="https://exemplo.com/pagina"
+                    className="input-minimal flex-1"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || !targetUrl || !linkName}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Criar
+                  </button>
+                </div>
               </form>
             </div>
 
@@ -120,43 +184,99 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-3">
                   {links.map((link) => (
-                    <div
-                      key={link.id}
-                      className="card-minimal flex items-center justify-between gap-4"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <code className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm font-mono">
-                            {link.shortCode}
-                          </code>
-                          <span className="text-xs text-muted-foreground">
-                            {link.clicks} {link.clicks === 1 ? 'clique' : 'cliques'}
-                          </span>
+                    <div key={link.id} className="card-minimal">
+                      {editingLink?.id === link.id ? (
+                        // Modo de edição
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-2">
+                              Nome do Link
+                            </label>
+                            <input
+                              type="text"
+                              value={editingLink.name}
+                              onChange={(e) => setEditingLink({ ...editingLink, name: e.target.value })}
+                              className="input-minimal w-full"
+                              disabled={isLoading}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-2">
+                              URL de Destino
+                            </label>
+                            <input
+                              type="url"
+                              value={editingLink.targetUrl}
+                              onChange={(e) => setEditingLink({ ...editingLink, targetUrl: e.target.value })}
+                              className="input-minimal w-full"
+                              disabled={isLoading}
+                            />
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => setEditingLink(null)}
+                              className="px-3 py-2 rounded border border-border text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+                              disabled={isLoading}
+                            >
+                              <X className="w-4 h-4" />
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={handleSaveEdit}
+                              className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isLoading}
+                            >
+                              <Check className="w-4 h-4" />
+                              Salvar
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {link.targetUrl}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Criado em {new Date(link.createdAt).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
+                      ) : (
+                        // Modo de visualização
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-foreground mb-1">{link.name}</h3>
+                            <div className="flex items-center gap-2 mb-2">
+                              <code className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-sm font-mono">
+                                {link.shortCode}
+                              </code>
+                              <span className="text-xs text-muted-foreground">
+                                {link.clicks} {link.clicks === 1 ? 'clique' : 'cliques'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {link.targetUrl}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Criado em {new Date(link.createdAt).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
 
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleCopyLink(link.shortCode)}
-                          className="p-2 hover:bg-secondary rounded transition-colors"
-                          title="Copiar link"
-                        >
-                          <Copy className="w-4 h-4 text-primary" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteLink(link.id)}
-                          className="p-2 hover:bg-destructive hover:bg-opacity-10 rounded transition-colors"
-                          title="Deletar link"
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </button>
-                      </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => handleCopyLink(link.shortCode)}
+                              className="p-2 hover:bg-secondary rounded transition-colors"
+                              title="Copiar link"
+                            >
+                              <Copy className="w-4 h-4 text-primary" />
+                            </button>
+                            <button
+                              onClick={() => handleEditLink(link)}
+                              className="p-2 hover:bg-secondary rounded transition-colors"
+                              title="Editar link"
+                            >
+                              <Edit2 className="w-4 h-4 text-primary" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLink(link.id)}
+                              className="p-2 hover:bg-destructive hover:bg-opacity-10 rounded transition-colors"
+                              title="Deletar link"
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -187,6 +307,7 @@ export default function Dashboard() {
                     <strong>Como usar:</strong>
                   </p>
                   <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Insira um nome para o link</li>
                     <li>Insira a URL de destino</li>
                     <li>Clique em "Criar"</li>
                     <li>Copie o link gerado</li>
