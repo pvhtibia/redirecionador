@@ -13,29 +13,39 @@ import { Loader2 } from 'lucide-react';
 
 export default function Redirect() {
   const [match, params] = useRoute('/r/:shortCode');
-  const { getLink, recordClick, isLoaded } = useLinks();
+  const { getLink, recordClick, isLoaded, links } = useLinks();
   const [status, setStatus] = useState<'loading' | 'error' | 'redirecting'>('loading');
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   useEffect(() => {
-    // Aguardar que os dados sejam carregados do localStorage
+    // Aguardar que os dados sejam carregados
     if (!isLoaded) {
       return;
     }
 
     if (!match || !params?.shortCode) {
       setStatus('error');
+      setDebugInfo('Parâmetro shortCode não encontrado');
       return;
     }
 
-    const link = getLink(params.shortCode);
+    const shortCode = params.shortCode as string;
+    
+    // Log para debug
+    console.log('Buscando link:', shortCode);
+    console.log('Links disponíveis:', links.length);
+    console.log('Links:', links.map(l => l.shortCode));
+
+    const link = getLink(shortCode);
 
     if (!link) {
       setStatus('error');
+      setDebugInfo(`Link "${shortCode}" não encontrado. Links disponíveis: ${links.map(l => l.shortCode).join(', ') || 'nenhum'}`);
       return;
     }
 
     // Registrar clique
-    recordClick(params.shortCode);
+    recordClick(shortCode);
     setStatus('redirecting');
 
     // Redirecionar após 500ms
@@ -44,14 +54,19 @@ export default function Redirect() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [match, params, getLink, recordClick, isLoaded]);
+  }, [match, params, getLink, recordClick, isLoaded, links]);
 
   if (status === 'error') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <h1 className="text-4xl font-bold text-foreground mb-2">404</h1>
-          <p className="text-muted-foreground mb-6">Link não encontrado ou expirado.</p>
+          <p className="text-muted-foreground mb-2">Link não encontrado ou expirado.</p>
+          {debugInfo && (
+            <p className="text-xs text-muted-foreground mb-6 bg-secondary p-3 rounded">
+              {debugInfo}
+            </p>
+          )}
           <a
             href="/"
             className="btn-primary inline-block"
