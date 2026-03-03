@@ -20,8 +20,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (password: string): boolean => {
-    // Senha padrão: "admin123" (em produção, isso seria validado no backend)
-    const correctPassword = 'admin123';
+    // Senha: "Prime159753" (em produção, isso seria validado no backend)
+    const correctPassword = 'Prime159753';
     
     if (password === correctPassword) {
       setIsAuthenticated(true);

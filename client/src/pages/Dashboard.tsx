@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLinks } from '@/contexts/LinksContext';
 import { useLocation } from 'wouter';
-import { Plus, Trash2, Copy, LogOut, Edit2, X, Check } from 'lucide-react';
+import { Plus, Trash2, Copy, LogOut, Edit2, X, Check, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 /**
@@ -124,13 +124,23 @@ export default function Dashboard() {
       <header className="border-b border-border bg-card shadow-sm">
         <div className="container flex items-center justify-between py-4">
           <h1 className="text-2xl font-bold text-foreground">Link Redirector</h1>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sair
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLocation('/export')}
+              className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              title="Exportar links"
+            >
+              <Download className="w-4 h-4" />
+              Exportar
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
@@ -183,7 +193,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {links.map((link) => (
+                  {[...links].sort((a, b) => a.name.localeCompare(b.name)).map((link) => (
                     <div key={link.id} className="card-minimal">
                       {editingLink?.id === link.id ? (
                         // Modo de edição

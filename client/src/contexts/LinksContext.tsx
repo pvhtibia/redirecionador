@@ -22,27 +22,68 @@ interface LinksContextType {
 
 const LinksContext = createContext<LinksContextType | undefined>(undefined);
 
+const CONFIG_URL = '/links-config.json';
+
+async function loadLinksFromFile(): Promise<RedirectLink[]> {
+  try {
+    const response = await fetch(CONFIG_URL);
+    if (!response.ok) {
+      console.error('Erro ao carregar arquivo de configuração:', response.status);
+      return [];
+    }
+    const data = await response.json();
+    return data.links || [];
+  } catch (error) {
+    console.error('Erro ao carregar links:', error);
+    return [];
+  }
+}
+
+async function saveLinksToFile(links: RedirectLink[]): Promise<void> {
+  try {
+    // Em um site estático, não podemos salvar no servidor
+    // Então salvamos no localStorage como fallback
+    localStorage.setItem('link-redirector-links', JSON.stringify(links));
+  } catch (error) {
+    console.error('Erro ao salvar links:', error);
+  }
+}
+
 export function LinksProvider({ children }: { children: React.ReactNode }) {
   const [links, setLinks] = useState<RedirectLink[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Carregar links do localStorage ao montar
+  // Carregar links ao montar
   useEffect(() => {
-    const stored = localStorage.getItem('link-redirector-links');
-    if (stored) {
-      try {
-        setLinks(JSON.parse(stored));
-      } catch (e) {
-        console.error('Erro ao carregar links:', e);
+    const loadLinks = async () => {
+      // Tentar carregar do arquivo primeiro
+      let loadedLinks = await loadLinksFromFile();
+      
+      // Se não houver links no arquivo, tentar localStorage
+      if (loadedLinks.length === 0) {
+        const stored = localStorage.getItem('link-redirector-links');
+        if (stored) {
+          try {
+            loadedLinks = JSON.parse(stored);
+          } catch (e) {
+            console.error('Erro ao carregar links do localStorage:', e);
+          }
+        }
       }
-    }
-    setIsLoaded(true);
+      
+      setLinks(loadedLinks);
+      setIsLoaded(true);
+    };
+
+    loadLinks();
   }, []);
 
-  // Salvar links no localStorage sempre que mudarem
+  // Salvar links sempre que mudarem
   useEffect(() => {
-    localStorage.setItem('link-redirector-links', JSON.stringify(links));
-  }, [links]);
+    if (isLoaded) {
+      saveLinksToFile(links);
+    }
+  }, [links, isLoaded]);
 
   const addLink = (name: string, targetUrl: string): RedirectLink => {
     const shortCode = nanoid(6);

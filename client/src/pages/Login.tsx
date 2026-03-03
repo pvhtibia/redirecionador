@@ -67,7 +67,7 @@ export default function Login() {
               autoFocus
             />
             <p className="text-xs text-muted-foreground mt-2">
-              Dica: a senha padrão é <code className="bg-secondary px-1 rounded">admin123</code>
+              Digite sua senha para acessar o painel.
             </p>
           </div>
 

@@ -7,6 +7,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Export from "./pages/Export";
 import Redirect from "./pages/Redirect";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +38,11 @@ function Router() {
       {/* Rota do dashboard (protegida) */}
       <Route path={"/dashboard"}>
         {() => <ProtectedRoute component={Dashboard} />}
+      </Route>
+
+      {/* Rota de exportação (protegida) */}
+      <Route path={"/export"}>
+        {() => <ProtectedRoute component={Export} />}
       </Route>
 
       {/* Rota de redirecionamento */}
