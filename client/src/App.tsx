@@ -3,7 +3,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LinksProvider } from "./contexts/LinksContext";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -29,7 +30,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return <Component />;
 }
 
-function Router() {
+function AppRouter() {
   return (
     <Switch>
       {/* Rota de login */}
@@ -63,7 +64,9 @@ function App() {
           <LinksProvider>
             <TooltipProvider>
               <Toaster />
-              <Router />
+              <Router hook={useHashLocation}>
+                <AppRouter />
+              </Router>
             </TooltipProvider>
           </LinksProvider>
         </AuthProvider>
