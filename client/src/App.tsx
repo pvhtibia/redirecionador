@@ -1,39 +1,66 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { LinksProvider } from "./contexts/LinksContext";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Redirect from "./pages/Redirect";
+import NotFound from "./pages/NotFound";
 
+/**
+ * Design System: Minimalismo Funcional
+ * - Paleta: Azul vibrante (#2563EB) + branco/cinza
+ * - Tipografia: Poppins Bold para títulos, Inter Regular para corpo
+ * - Layout: Grid assimétrico, cards com sombra sutil
+ * - Interações: Transições suaves, feedback imediato
+ */
+
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return <Component />;
+}
 
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      {/* Rota de login */}
+      <Route path={"/"} component={Login} />
+      
+      {/* Rota do dashboard (protegida) */}
+      <Route path={"/dashboard"}>
+        {() => <ProtectedRoute component={Dashboard} />}
+      </Route>
+
+      {/* Rota de redirecionamento */}
+      <Route path={"/r/:shortCode"} component={Redirect} />
+
+      {/* Fallback 404 */}
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+      <ThemeProvider defaultTheme="light">
+        <AuthProvider>
+          <LinksProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </LinksProvider>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
